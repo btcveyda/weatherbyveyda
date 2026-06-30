@@ -39,16 +39,30 @@ class RedisCache:
     def __init__(self, url: str):
         if aioredis is None:
             raise RuntimeError("redis.asyncio package is required for RedisCache")
-        self._redis = aioredis.from_url(url)
+        self._url = url
+        self._redis = None
+
+    async def _get_redis(self):
+        if self._redis is None:
+            self._redis = aioredis.from_url(self._url)
+        return self._redis
 
     async def get(self, key: str) -> Optional[Any]:
-        raw = await self._redis.get(key)
-        if raw is None:
+        try:
+            redis = await self._get_redis()
+            raw = await redis.get(key)
+            if raw is None:
+                return None
+            return json.loads(raw)
+        except Exception:
             return None
-        return json.loads(raw)
 
     async def set(self, key: str, value: Any, ttl: int):
-        await self._redis.set(key, json.dumps(value), ex=ttl)
+        try:
+            redis = await self._get_redis()
+            await redis.set(key, json.dumps(value), ex=ttl)
+        except Exception:
+            pass
 
 
 _cache: Optional[Any] = None
@@ -62,7 +76,7 @@ def get_cache():
         try:
             _cache = RedisCache(settings.REDIS_URL)
             return _cache
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Warning: Redis disabled, using in-memory cache: {e}")
     _cache = InMemoryCache()
     return _cache
