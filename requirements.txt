@@ -3,5 +3,5 @@ uvicorn[standard]==0.22.0
 httpx==0.24.1
 pydantic==1.10.12
 python-dotenv==1.0.0
-redis==5.3.4
-django==4.3.8
+redis==5.0.0
+django==4.2.15
